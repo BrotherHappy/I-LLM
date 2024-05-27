@@ -1,5 +1,4 @@
 import os
-os.environ["https_proxy"] = "127.0.0.1:7890"
 import sys,random,numpy as np,time,pdb,torch,torch.nn as nn,utils
 from models.LMClass import LMClass
 from datautils import get_loaders
