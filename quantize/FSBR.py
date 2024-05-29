@@ -5,8 +5,6 @@ from models.int_llama_layer import QuantLlamaDecoderLayer,QuantLlamaAttention
 from models.int_opt_layer import QuantOPTDecoderLayer
 from models.int_falcon_layer import QuantFalconDecoderLayer
 from quantize.quant_modules import QuantLinear
-# from quantize.quant_modules import FSBRLlamaRMSNorm
-# from quantize.quant_modules import QuantAdd,QuantSoftmax,QuantSwiglu
 
 from contextlib import nullcontext
 import copy
@@ -319,17 +317,11 @@ def FSBR(
                 logger.info(f"layer {i} iter {epochs} loss:{loss_mean} norm:{norm_mean} max memory_allocated {torch.cuda.max_memory_allocated(lm._device) / 1024**2} ")
             clear_temp_variable(qlayer)
             del optimizer
-        # real smooth and quantization
-        # smooth_and_quant_temporary(qlayer, args, is_llama,True)
-        # o1 = qlayer(quant_inps[index:index+args.batch_size,], attention_mask=attention_mask_batch,position_ids=position_ids)[0]
         if best_st is not None:
             qlayer.load_state_dict(best_st,strict=False)
         smooth_and_quant_inplace(qlayer, args, is_llama)
-        # o2 = qlayer(quant_inps[index:index+args.batch_size,], attention_mask=attention_mask_batch,position_ids=position_ids)[0]
         if args.epochs>0:
-            # update input of quantization model
             with torch.no_grad():
-                # with torch.cuda.amp.autocast():
                 with traincast():
                     for j in range(args.nsamples):
                         quant_inps[j] = qlayer(quant_inps[j].unsqueeze(0), attention_mask=attention_mask,position_ids=position_ids)[0]
@@ -344,6 +336,9 @@ def FSBR(
         
         del layer
         torch.cuda.empty_cache()
+        if args.illm:
+            #TODO We will soon open source implementations of these Interger-only operators
+            pass
 
     del inps
     del quant_inps
